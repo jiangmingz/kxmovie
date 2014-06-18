@@ -292,7 +292,7 @@ end
 
 desc "Copy to output folder"
 task :copy_movie do	
-	dest = ensureDir 'output'	
+	dest = ensureDir '../'	
 	FileUtils.move Pathname.new('tmp/build/libkxmovie.a'), dest		
 	FileUtils.copy Pathname.new('libs/FFmpeg/libavcodec.a'), dest
 	FileUtils.copy Pathname.new('libs/FFmpeg/libavformat.a'), dest
