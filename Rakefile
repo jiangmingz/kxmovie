@@ -260,19 +260,32 @@ task :build_movie_debug do
 	FileUtils.move Pathname.new('tmp/build/Debug-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Debug-iphoneos/libkxmovie_armv7s.a')	
 
 	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7"		
-	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir}"	
+	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir} -arch -i386"	
 	system_or_exit "lipo -create -arch armv7 tmp/build/Debug-iphoneos/libkxmovie.a -arch armv7 tmp/build/Debug-iphoneos/libkxmovie_armv7s.a -arch i386 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
+	#MISKO#system_or_exit "lipo -create -arch armv7 tmp/build/Debug-iphoneos/libkxmovie.a -arch armv7 tmp/build/Debug-iphoneos/libkxmovie_armv7s.a -arch armv8 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
 end
 
 desc "Build libkxmovie-release"
 task :build_movie_release do
 	buildDir = Pathname.new 'tmp/build'
-	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7s"	
-	FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_armv7s.a')	
+	#FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_armv7s.a')	
 
+	#compile and move
+	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7s"	
+	FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_armv7s.a')
+
+	#compile and move
+	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch arm64"	
+	FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_arm64.a')
+
+	#compile and move
 	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7"	
-	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir}"	
-	system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie.a -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch i386 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
+	FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_armv7.a')
+
+	#system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7"	
+	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir} -arch i386"	
+	system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7.a -arch armv7s tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch arm64 tmp/build/Release-iphoneos/libkxmovie_arm64.a -arch i386 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
+	#MISKO#system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie.a -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch armv7 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
 	
 	#FileUtils.copy Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), buildDir
 end
@@ -289,6 +302,8 @@ task :copy_movie do
 	FileUtils.copy Pathname.new('kxmovie/KxMovieViewController.h'), dest	
 	FileUtils.copy Pathname.new('kxmovie/KxAudioManager.h'), dest	
 	FileUtils.copy Pathname.new('kxmovie/KxMovieDecoder.h'), dest
+	FileUtils.copy Pathname.new('kxmovie/KxMovieGLView.h'), dest
+	FileUtils.copy Pathname.new('kxmovie/KxLogger.h'), dest
 	FileUtils.copy_entry Pathname.new('kxmovie/kxmovie.bundle'), dest + 'kxmovie.bundle'
 end	
 

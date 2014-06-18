@@ -67,25 +67,25 @@ static NSMutableDictionary * gHistory;
 
 #define LOCAL_MIN_BUFFERED_DURATION   0.2
 #define LOCAL_MAX_BUFFERED_DURATION   0.4
-#define NETWORK_MIN_BUFFERED_DURATION 2.0
-#define NETWORK_MAX_BUFFERED_DURATION 4.0
+#define NETWORK_MIN_BUFFERED_DURATION 0.2 //MISKO
+#define NETWORK_MAX_BUFFERED_DURATION 1.0 //MISKO
 
 @interface KxMovieViewController () {
 
     KxMovieDecoder      *_decoder;    
     dispatch_queue_t    _dispatchQueue;
     NSMutableArray      *_videoFrames;
-    NSMutableArray      *_audioFrames;
+    //NSMutableArray      *_audioFrames;
     NSMutableArray      *_subtitles;
-    NSData              *_currentAudioFrame;
-    NSUInteger          _currentAudioFramePos;
+    //NSData              *_currentAudioFrame;
+    //NSUInteger          _currentAudioFramePos;
     CGFloat             _moviePosition;
     BOOL                _disableUpdateHUD;
     NSTimeInterval      _tickCorrectionTime;
     NSTimeInterval      _tickCorrectionPosition;
     NSUInteger          _tickCounter;
     BOOL                _fullscreen;
-    BOOL                _hiddenHUD;
+    //BOOL                _hiddenHUD;
     BOOL                _fitMode;
     BOOL                _infoMode;
     BOOL                _restoreIdleTimer;
@@ -109,13 +109,13 @@ static NSMutableDictionary * gHistory;
     UILabel             *_progressLabel;
     UILabel             *_leftLabel;
     UIButton            *_infoButton;
-    UITableView         *_tableView;
+    //UITableView         *_tableView;
     UIActivityIndicatorView *_activityIndicatorView;
     UILabel             *_subtitlesLabel;
     
-    UITapGestureRecognizer *_tapGestureRecognizer;
-    UITapGestureRecognizer *_doubleTapGestureRecognizer;
-    UIPanGestureRecognizer *_panGestureRecognizer;
+    //UITapGestureRecognizer *_tapGestureRecognizer;
+    //UITapGestureRecognizer *_doubleTapGestureRecognizer;
+    //UIPanGestureRecognizer *_panGestureRecognizer;
         
 #ifdef DEBUG
     UILabel             *_messageLabel;
@@ -152,8 +152,8 @@ static NSMutableDictionary * gHistory;
 + (id) movieViewControllerWithContentPath: (NSString *) path
                                parameters: (NSDictionary *) parameters
 {    
-    id<KxAudioManager> audioManager = [KxAudioManager audioManager];
-    [audioManager activateAudioSession];    
+    //id<KxAudioManager> audioManager = [KxAudioManager audioManager];
+    //[audioManager activateAudioSession];
     return [[KxMovieViewController alloc] initWithContentPath: path parameters: parameters];
 }
 
@@ -245,11 +245,12 @@ _messageLabel.hidden = YES;
 
     CGFloat topH = 50;
     CGFloat botH = 50;
-
+    
     _topHUD    = [[UIView alloc] initWithFrame:CGRectMake(0,0,0,0)];
     _topBar    = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, width, topH)];
     _bottomBar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, height-botH, width, botH)];
     _bottomBar.tintColor = [UIColor blackColor];
+    
 
     _topHUD.frame = CGRectMake(0,0,width,_topBar.frame.size.height);
 
@@ -257,13 +258,15 @@ _messageLabel.hidden = YES;
     _topBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _bottomBar.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth;
 
-    [self.view addSubview:_topBar];
-    [self.view addSubview:_topHUD];
-    [self.view addSubview:_bottomBar];
+    [self.view addSubview:_topBar]; //MISKO // the white background to top
+    [self.view addSubview:_topHUD]; //MISKO
+    [self.view addSubview:_bottomBar]; //MISKO
 
+   
+    
     // top hud
 
-    _doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    /*_doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
     _doneButton.frame = CGRectMake(0, 1, 50, topH);
     _doneButton.backgroundColor = [UIColor clearColor];
 //    _doneButton.backgroundColor = [UIColor redColor];
@@ -311,10 +314,22 @@ _messageLabel.hidden = YES;
     [_topHUD addSubview:_progressLabel];
     [_topHUD addSubview:_progressSlider];
     [_topHUD addSubview:_leftLabel];
-    [_topHUD addSubview:_infoButton];
+    [_topHUD addSubview:_infoButton];*/
 
     // bottom hud
 
+    _doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    _doneButton.frame = CGRectMake(5, 5, 150, topH);
+    _doneButton.backgroundColor = [UIColor redColor];
+    [_doneButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_doneButton setTitle:NSLocalizedString(@"Cookie", nil) forState:UIControlStateNormal];
+    _doneButton.titleLabel.font = [UIFont systemFontOfSize:18];
+    _doneButton.showsTouchWhenHighlighted = YES;
+    [_doneButton addTarget:self action:@selector(doneDidTouch:)
+          forControlEvents:UIControlEventTouchUpInside];
+    
+    [_topHUD addSubview:_doneButton];
+    
     _spaceItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace
                                                                target:nil
                                                                action:nil];
@@ -328,9 +343,11 @@ _messageLabel.hidden = YES;
                                                                target:self
                                                                action:@selector(rewindDidTouch:)];
 
+  
     _playBtn = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPlay
                                                              target:self
-                                                             action:@selector(playDidTouch:)];
+                                                             action:nil];
+                                                             //action:@selector(playDidTouch:)];
     _playBtn.width = 50;
     
     _pauseBtn = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPause
@@ -403,8 +420,8 @@ _messageLabel.hidden = YES;
     if (self.presentingViewController)
         [self fullscreenMode:YES];
     
-    if (_infoMode)
-        [self showInfoView:NO animated:NO];
+    /*if (_infoMode)
+        [self showInfoView:NO animated:NO];*/
     
     _savedIdleTimer = [[UIApplication sharedApplication] isIdleTimerDisabled];
     
@@ -472,7 +489,7 @@ _messageLabel.hidden = YES;
 
 #pragma mark - gesture recognizer
 
-- (void) handleTap: (UITapGestureRecognizer *) sender
+/*- (void) handleTap: (UITapGestureRecognizer *) sender
 {
     if (sender.state == UIGestureRecognizerStateEnded) {
         
@@ -508,7 +525,7 @@ _messageLabel.hidden = YES;
         }
         //LoggerStream(2, @"pan %.2f %.2f %.2f sec", pt.x, vt.x, sc);
     }
-}
+}*/
 
 #pragma mark - public
 
@@ -544,9 +561,11 @@ _messageLabel.hidden = YES;
         [self tick];
     });
 
-    if (_decoder.validAudio)
-        [self enableAudio:YES];
-
+    /*if (_decoder.validAudio)
+        [self enableAudio:YES];*/
+    NSLog(@"disable audio !!!!!!"); //MISKO
+    //[self enableAudio:NO];
+    
     LoggerStream(1, @"play movie");
 }
 
@@ -557,7 +576,7 @@ _messageLabel.hidden = YES;
 
     self.playing = NO;
     //_interrupted = YES;
-    [self enableAudio:NO];
+    //[self enableAudio:NO];
     [self updatePlayButton];
     LoggerStream(1, @"pause movie");
 }
@@ -568,7 +587,7 @@ _messageLabel.hidden = YES;
     
     self.playing = NO;
     _disableUpdateHUD = YES;
-    [self enableAudio:NO];
+    //[self enableAudio:NO];
     
     dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC);
     dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
@@ -579,7 +598,7 @@ _messageLabel.hidden = YES;
 
 #pragma mark - actions
 
-- (void) doneDidTouch: (id) sender
+/*- (void) doneDidTouch: (id) sender
 {
     if (self.presentingViewController || !self.navigationController)
         [self dismissViewControllerAnimated:YES completion:nil];
@@ -615,7 +634,7 @@ _messageLabel.hidden = YES;
     NSAssert(_decoder.duration != MAXFLOAT, @"bugcheck");
     UISlider *slider = sender;
     [self setMoviePosition:slider.value * _decoder.duration];
-}
+}*/
 
 #pragma mark - private
 
@@ -629,7 +648,7 @@ _messageLabel.hidden = YES;
         _decoder        = decoder;
         _dispatchQueue  = dispatch_queue_create("KxMovie", DISPATCH_QUEUE_SERIAL);
         _videoFrames    = [NSMutableArray array];
-        _audioFrames    = [NSMutableArray array];
+        //_audioFrames    = [NSMutableArray array];
         
         if (_decoder.subtitleStreamsCount) {
             _subtitles = [NSMutableArray array];
@@ -733,7 +752,7 @@ _messageLabel.hidden = YES;
         
     if (_decoder.validVideo) {
     
-        [self setupUserInteraction];
+        //[self setupUserInteraction]; MISKO
     
     } else {
        
@@ -784,7 +803,7 @@ _messageLabel.hidden = YES;
         [self.view addSubview:_subtitlesLabel];
     }
 }
-
+/*
 - (void) setupUserInteraction
 {
     UIView * view = [self frameView];
@@ -805,13 +824,14 @@ _messageLabel.hidden = YES;
 //    _panGestureRecognizer.enabled = NO;
 //    
 //    [view addGestureRecognizer:_panGestureRecognizer];
-}
+}*/
 
 - (UIView *) frameView
 {
     return _glView ? _glView : _imageView;
 }
 
+/*
 - (void) audioCallbackFillData: (float *) outData
                      numFrames: (UInt32) numFrames
                    numChannels: (UInt32) numChannels
@@ -910,8 +930,9 @@ _messageLabel.hidden = YES;
             }
         }
     }
-}
+}*/
 
+/*
 - (void) enableAudio: (BOOL) on
 {
     id<KxAudioManager> audioManager = [KxAudioManager audioManager];
@@ -935,7 +956,7 @@ _messageLabel.hidden = YES;
         [audioManager pause];
         audioManager.outputBlock = nil;
     }
-}
+}*/
 
 - (BOOL) addFrames: (NSArray *)frames
 {
@@ -953,7 +974,7 @@ _messageLabel.hidden = YES;
     
     if (_decoder.validAudio) {
         
-        @synchronized(_audioFrames) {
+        /*@synchronized(_audioFrames) {
             
             for (KxMovieFrame *frame in frames)
                 if (frame.type == KxMovieFrameTypeAudio) {
@@ -961,7 +982,7 @@ _messageLabel.hidden = YES;
                     if (!_decoder.validVideo)
                         _bufferedDuration += frame.duration;
                 }
-        }
+        }*/
         
         if (!_decoder.validVideo) {
             
@@ -1067,8 +1088,8 @@ _messageLabel.hidden = YES;
     if (self.playing) {
         
         const NSUInteger leftFrames =
-        (_decoder.validVideo ? _videoFrames.count : 0) +
-        (_decoder.validAudio ? _audioFrames.count : 0);
+        (_decoder.validVideo ? _videoFrames.count : 0) + 0; //MISKO
+        //(_decoder.validAudio ? _audioFrames.count : 0);
         
         if (0 == leftFrames) {
             
@@ -1306,7 +1327,7 @@ _messageLabel.hidden = YES;
         _leftLabel.text = formatTimeInterval(duration - position, YES);
 
 #ifdef DEBUG
-    const NSTimeInterval timeSinceStart = [NSDate timeIntervalSinceReferenceDate] - _debugStartTime;
+    /*const NSTimeInterval timeSinceStart = [NSDate timeIntervalSinceReferenceDate] - _debugStartTime;
     NSString *subinfo = _decoder.validSubtitles ? [NSString stringWithFormat: @" %d",_subtitles.count] : @"";
     
     NSString *audioStatus;
@@ -1332,23 +1353,24 @@ _messageLabel.hidden = YES;
                           //timeSinceStart > _moviePosition + 0.5 ? @" (lags)" : @"",
                           _decoder.isEOF ? @"- END" : @"",
                           audioStatus,
-                          _buffered ? [NSString stringWithFormat:@"buffering %.1f%%", _bufferedDuration / _minBufferedDuration * 100] : @""];
+                          _buffered ? [NSString stringWithFormat:@"buffering %.1f%%", _bufferedDuration / _minBufferedDuration * 100] : @""];*/
 #endif
 }
 
 - (void) showHUD: (BOOL) show
 {
-    _hiddenHUD = !show;    
-    _panGestureRecognizer.enabled = _hiddenHUD;
+    //_hiddenHUD = !show;
+    //_panGestureRecognizer.enabled = _hiddenHUD;
         
-    [[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
+    //[[UIApplication sharedApplication] setIdleTimerDisabled:_hiddenHUD];
     
     [UIView animateWithDuration:0.2
                           delay:0.0
                         options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionTransitionNone
                      animations:^{
                          
-                         CGFloat alpha = _hiddenHUD ? 0 : 1;
+                         //CGFloat alpha = _hiddenHUD ? 0 : 1;
+                         CGFloat alpha = 1;
                          _topBar.alpha = alpha;
                          _topHUD.alpha = alpha;
                          _bottomBar.alpha = alpha;
@@ -1370,7 +1392,13 @@ _messageLabel.hidden = YES;
 
 - (void) setMoviePositionFromDecoder
 {
-    _moviePosition = _decoder.position;
+    
+    NSLog(@"%0.2f %0.2f %0.2f %0.2f" , _moviePosition, _decoder.position, [_decoder position], [_decoder duration]);
+    //_moviePosition = _decoder.position;
+    //[self freeBufferedFrames];
+    [_decoder resyncStream];
+    //[self freeBufferedFrames];
+    //NSLog(@"%0.2f %0.2f %0.2f" , _moviePosition, _decoder.position, _decoder.duration);
 }
 
 - (void) setDecoderPosition: (CGFloat) position
@@ -1441,11 +1469,11 @@ _messageLabel.hidden = YES;
         [_videoFrames removeAllObjects];
     }
     
-    @synchronized(_audioFrames) {
+    /*@synchronized(_audioFrames) {
         
         [_audioFrames removeAllObjects];
         _currentAudioFrame = nil;
-    }
+    }*/
     
     if (_subtitles) {
         @synchronized(_subtitles) {
@@ -1456,7 +1484,7 @@ _messageLabel.hidden = YES;
     _bufferedDuration = 0;
 }
 
-- (void) showInfoView: (BOOL) showInfo animated: (BOOL)animated
+/*- (void) showInfoView: (BOOL) showInfo animated: (BOOL)animated
 {
     if (!_tableView)
         [self createTableView];
@@ -1511,9 +1539,9 @@ _messageLabel.hidden = YES;
     }
     
     _infoMode = showInfo;    
-}
+}*/
 
-- (void) createTableView
+/*- (void) createTableView
 {    
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth |UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleBottomMargin;
@@ -1527,7 +1555,7 @@ _messageLabel.hidden = YES;
     _tableView.frame = CGRectMake(0,size.height,size.width,size.height - Y);
     
     [self.view addSubview:_tableView];   
-}
+}*/
 
 - (void) handleDecoderMovieError: (NSError *) error
 {
@@ -1549,7 +1577,7 @@ _messageLabel.hidden = YES;
 
 #pragma mark - Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+/*- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
     return KxMovieInfoSectionCount;
 }
@@ -1742,7 +1770,7 @@ _messageLabel.hidden = YES;
             }
         }
     }
-}
+}*/
 
 @end
 

@@ -443,6 +443,12 @@ static int interrupt_callback(void *ctx);
 @dynamic videoStreamFormatName;
 @dynamic startTime;
 
++(void) setLogLevel:(NSInteger)level {
+    int ll = av_log_get_level();
+    NSLog(@"current log level is %d",ll);
+    av_log_set_level(0);
+}
+
 - (CGFloat) duration
 {
     if (!_formatCtx)
@@ -473,6 +479,20 @@ static int interrupt_callback(void *ctx);
         avformat_seek_file(_formatCtx, _audioStream, ts, ts, ts, AVSEEK_FLAG_FRAME);
         avcodec_flush_buffers(_audioCodecCtx);
     }
+}
+
+-(void) resyncStream
+{
+    avio_flush(_formatCtx->pb);
+    avcodec_flush_buffers(_videoCodecCtx);
+    
+    //[self setPosition:_position+3 ];
+    
+    //avio_skip(_formatCtx->pb, 100000);
+    /*av_seek_frame(_formatCtx, _videoStream, _formatCtx->duration, 0);
+    avcodec_flush_buffers(_videoCodecCtx);*/
+    //int r = avformat_seek_file(_formatCtx, 0, 0, 0, 0,  AVSEEK_FLAG_BYTE);
+    //SLog(@"return %d from seek file",r);
 }
 
 - (NSUInteger) frameWidth
@@ -778,6 +798,11 @@ static int interrupt_callback(void *ctx);
         AVIOInterruptCB cb = {interrupt_callback, (__bridge void *)(self)};
         formatCtx->interrupt_callback = cb;
     }
+    //formatCtx->avio_flags=AVIO_FLAG_DIRECT;//MISKO
+    formatCtx->probesize=2048; //MISKO
+    formatCtx->max_analyze_duration=0; //MISKO
+    formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
+    formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
     
     if (avformat_open_input(&formatCtx, [path cStringUsingEncoding: NSUTF8StringEncoding], NULL, NULL) < 0) {
         
@@ -785,16 +810,20 @@ static int interrupt_callback(void *ctx);
             avformat_free_context(formatCtx);
         return kxMovieErrorOpenFile;
     }
-    
+    NSLog(@"test");
     if (avformat_find_stream_info(formatCtx, NULL) < 0) {
         
         avformat_close_input(&formatCtx);
         return kxMovieErrorStreamInfoNotFound;
     }
-
+    NSLog(@"test2");
     av_dump_format(formatCtx, 0, [path.lastPathComponent cStringUsingEncoding: NSUTF8StringEncoding], false);
-    
+    NSLog(@"test3 video codec = %@" , formatCtx->video_codec_id);
     _formatCtx = formatCtx;
+    
+    //SKIP TO CURRENT?
+    //av_seek_frame(formatCtx, -1, formatCtx->duration, 0); //MISKO
+    //avcodec_flush_buffers(formatCtx->codec); //MISKO
     return kxMovieErrorNone;
 }
 
@@ -1169,7 +1198,7 @@ static int interrupt_callback(void *ctx);
     
     const int64_t frameDuration = av_frame_get_pkt_duration(_videoFrame);
     if (frameDuration) {
-        
+        //LoggerVideo(2,@"duration recieved is %lld",frameDuration);
         frame.duration = frameDuration * _videoTimeBase;
         frame.duration += _videoFrame->repeat_pict * _videoTimeBase * 0.5;
         
@@ -1183,7 +1212,7 @@ static int interrupt_callback(void *ctx);
         // as example yuvj420p stream from web camera
         frame.duration = 1.0 / _fps;
     }    
-    
+    frame.duration=0.0001; //MISKO
 #if 0
     LoggerVideo(2, @"VFD: %.4f %.4f | %lld ",
                 frame.position,
@@ -1365,14 +1394,16 @@ static int interrupt_callback(void *ctx);
     CGFloat decodedDuration = 0;
     
     BOOL finished = NO;
-    
+    long packet_num=0;
     while (!finished) {
-        
         if (av_read_frame(_formatCtx, &packet) < 0) {
             _isEOF = YES;
             break;
         }
-        
+        /*packet_num++;
+        if ( (packet_num%3)!=1) {
+            continue; //MISKO
+        }*/
         if (packet.stream_index ==_videoStream) {
            
             int pktSize = packet.size;
@@ -1408,6 +1439,7 @@ static int interrupt_callback(void *ctx);
                         [result addObject:frame];
                         
                         _position = frame.position;
+                        //NSLog(@"New position is %0.4f",_position); //MISKO looks like these packets are buffered somewhere
                         decodedDuration += frame.duration;
                         if (decodedDuration > minDuration)
                             finished = YES;

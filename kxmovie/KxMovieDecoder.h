@@ -107,7 +107,7 @@ typedef BOOL(^KxMovieDecoderInterruptCallback)();
 @property (readonly, nonatomic) CGFloat startTime;
 @property (readwrite, nonatomic) BOOL disableDeinterlacing;
 @property (readwrite, nonatomic, strong) KxMovieDecoderInterruptCallback interruptCallback;
-
++(void) setLogLevel:(NSInteger)level;
 + (id) movieDecoderWithContentPath: (NSString *) path
                              error: (NSError **) perror;
 
@@ -120,6 +120,8 @@ typedef BOOL(^KxMovieDecoderInterruptCallback)();
 
 - (NSArray *) decodeFrames: (CGFloat) minDuration;
 
+- (void) resyncStream;
+
 @end
 
 @interface KxMovieSubtitleASSParser : NSObject
@@ -128,5 +130,6 @@ typedef BOOL(^KxMovieDecoderInterruptCallback)();
 + (NSArray *) parseDialogue: (NSString *) dialogue
                   numFields: (NSUInteger) numFields;
 + (NSString *) removeCommandsFromEventText: (NSString *) text;
+
 
 @end

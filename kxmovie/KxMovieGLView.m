@@ -16,7 +16,7 @@
 #import <OpenGLES/ES2/gl.h>
 #import <OpenGLES/ES2/glext.h>
 #import "KxMovieDecoder.h"
-#import "KxLogger.h"
+//#import "KxLogger.h"
 
 //////////////////////////////////////////////////////////
 

@@ -17,7 +17,7 @@ extern NSString * const KxMovieParameterMinBufferedDuration;    // Float
 extern NSString * const KxMovieParameterMaxBufferedDuration;    // Float
 extern NSString * const KxMovieParameterDisableDeinterlacing;   // BOOL
 
-@interface KxMovieViewController : UIViewController<UITableViewDataSource, UITableViewDelegate>
+@interface KxMovieViewController : UIViewController //<UITableViewDataSource, UITableViewDelegate>
 
 + (id) movieViewControllerWithContentPath: (NSString *) path
                                parameters: (NSDictionary *) parameters;
@@ -26,5 +26,6 @@ extern NSString * const KxMovieParameterDisableDeinterlacing;   // BOOL
 
 - (void) play;
 - (void) pause;
+- (void) setMoviePositionFromDecoder;
 
 @end
