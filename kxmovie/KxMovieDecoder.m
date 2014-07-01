@@ -47,7 +47,7 @@ static NSString * errorMessage (kxMovieError errorCode)
             return @"";
             
         case kxMovieErrorOpenFile:
-            return NSLocalizedString(@"Unable to open file", nil);
+            return NSLocalizedString(@"Unable to connect to PetBot", nil);
             
         case kxMovieErrorStreamInfoNotFound:
             return NSLocalizedString(@"Unable to find stream information", nil);
@@ -120,6 +120,8 @@ static void fillSignalF(float *outData,  UInt32 numFrames, UInt32 numChannels)
         if (phase > 1.0) phase = -1;
     }
 }
+
+#endif
 
 static void testConvertYUV420pToRGB(AVFrame * frame, uint8_t *outbuf, int linesize, int height)
 {
@@ -212,7 +214,6 @@ static void testConvertYUV420pToRGB(AVFrame * frame, uint8_t *outbuf, int linesi
         }
     }
 }
-#endif
 
 static void avStreamFPSTimeBase(AVStream *st, CGFloat defaultTimeBase, CGFloat *pFPS, CGFloat *pTimeBase)
 {
@@ -406,7 +407,7 @@ static int interrupt_callback(void *ctx);
     NSInteger           _videoStream;
     NSInteger           _audioStream;
     NSInteger           _subtitleStream;
-	AVPicture           _picture;
+	AVPicture           _picture, _lastValidPicture;
     BOOL                _pictureValid;
     struct SwsContext   *_swsContext;
     CGFloat             _videoTimeBase;
@@ -800,25 +801,42 @@ static int interrupt_callback(void *ctx);
     }
     //formatCtx->avio_flags=AVIO_FLAG_DIRECT;//MISKO
     formatCtx->probesize=2048; //MISKO
+    //formatCtx->probesize=2048*8; //MISKO
     formatCtx->max_analyze_duration=0; //MISKO
-    formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
-    formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
+    //formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
+    //formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
     
-    if (avformat_open_input(&formatCtx, [path cStringUsingEncoding: NSUTF8StringEncoding], NULL, NULL) < 0) {
+    AVDictionary *options = NULL;
+    //NSLog(@"Setting value as %@ %@ %@",@([self local_port]).stringValue, @([self local_port]+1).stringValue,  @([self advertised_port]).stringValue);
+    
+    av_dict_set(&options, "min_port", [@([self local_port]).stringValue UTF8String], 0);
+    av_dict_set(&options, "max_port", [@([self local_port]+2).stringValue UTF8String], 0);
+    av_dict_set(&options, "adv_port", [@([self advertised_port]).stringValue UTF8String], 0);
+    
+    av_dict_set(&options, "max_delay", "0.1", 0);
+    //formatCtx->max_delay //TODO MAX DELAY PART OF formatCTX STRUCT!
+    
+    //av_dict_set(&options, "direct", [@([self advertised_port]).stringValue UTF8String], 0);
+    
+    
+    //av_dict_set(&options, "adv_port", "50402", 0);
+    //NSLog(@"Xadv port is set 12345");
+    
+    if (avformat_open_input(&formatCtx, [path cStringUsingEncoding: NSUTF8StringEncoding], NULL, &options) < 0) {
         
         if (formatCtx)
             avformat_free_context(formatCtx);
         return kxMovieErrorOpenFile;
     }
-    NSLog(@"test");
+    //NSLog(@"Xcheck point kxmovie1");
     if (avformat_find_stream_info(formatCtx, NULL) < 0) {
         
         avformat_close_input(&formatCtx);
         return kxMovieErrorStreamInfoNotFound;
     }
-    NSLog(@"test2");
+    //NSLog(@"Xcheck point kxmovie2");
     av_dump_format(formatCtx, 0, [path.lastPathComponent cStringUsingEncoding: NSUTF8StringEncoding], false);
-    NSLog(@"test3 video codec = %@" , formatCtx->video_codec_id);
+    //NSLog(@"Xcheck point kxmovie3 video codec = %@" , formatCtx->video_codec_id);
     _formatCtx = formatCtx;
     
     //SKIP TO CURRENT?
@@ -1108,6 +1126,7 @@ static int interrupt_callback(void *ctx);
     }
     
     if (_pictureValid) {
+        LoggerVideo(1, @"VALID PICTURE");
         avpicture_free(&_picture);
         _pictureValid = NO;
     }
@@ -1121,6 +1140,11 @@ static int interrupt_callback(void *ctx);
                                     PIX_FMT_RGB24,
                                     _videoCodecCtx->width,
                                     _videoCodecCtx->height) == 0;
+    if (_pictureValid) {
+        LoggerVideo(1, @"VALID PICTURE");
+    } else {
+        LoggerVideo(1, @"NOT VALID PICTURE");
+    }
     
 	if (!_pictureValid)
         return NO;
@@ -1136,6 +1160,61 @@ static int interrupt_callback(void *ctx);
                                        NULL, NULL, NULL);
         
     return _swsContext != NULL;
+}
+
+
+
+-(UIImage *)currentImage {
+    AVPicture picture;
+    struct SwsContext *img_convert_ctx;
+ 	// Release old picture and scaler
+	//avpicture_free(&picture);
+	//sws_freeContext(img_convert_ctx);
+    
+	// Allocate RGB picture
+	avpicture_alloc(&picture, PIX_FMT_RGB24, 640, 480);
+	// Setup scaler
+	static int sws_flags =  SWS_FAST_BILINEAR;
+	img_convert_ctx = sws_getContext(_videoCodecCtx->width,
+									 _videoCodecCtx->height,
+									 _videoCodecCtx->pix_fmt,
+									 _videoCodecCtx->width,
+									 _videoCodecCtx->height,
+									 PIX_FMT_RGB24,
+									 sws_flags, NULL, NULL, NULL);
+    sws_scale(img_convert_ctx,
+              (const uint8_t **)_videoFrame->data,
+              _videoFrame->linesize,
+              0,
+              _videoCodecCtx->height,
+              picture.data,
+              picture.linesize);
+    return [self imageFromAVPicture:picture width:_videoCodecCtx->width height:_videoCodecCtx->height];
+}
+
+-(UIImage *)imageFromAVPicture:(AVPicture)pict width:(int)width height:(int)height {
+	CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault;
+	CFDataRef data = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, pict.data[0], pict.linesize[0]*height,kCFAllocatorNull);
+	CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
+	CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+	CGImageRef cgImage = CGImageCreate(width,
+									   height,
+									   8,
+									   24,
+									   pict.linesize[0],
+									   colorSpace,
+									   bitmapInfo,
+									   provider,
+									   NULL,
+									   NO,
+									   kCGRenderingIntentDefault);
+	CGColorSpaceRelease(colorSpace);
+	UIImage *image = [UIImage imageWithCGImage:cgImage];
+	CGImageRelease(cgImage);
+	CGDataProviderRelease(provider);
+	CFRelease(data);
+    
+	return image;
 }
 
 - (KxVideoFrame *) handleVideoFrame
@@ -1165,7 +1244,12 @@ static int interrupt_callback(void *ctx);
                                          _videoCodecCtx->height / 2);
         
         frame = yuvFrame;
-    
+        
+       
+        //testConvertYUV420pToRGB(yuvFrame, <#uint8_t *outbuf#>, _videoFrame->linesize[1], <#int height#>);
+        
+        
+        //LoggerVideo(1, @"YUV frame");
     } else {
     
         if (!_swsContext &&
@@ -1189,6 +1273,7 @@ static int interrupt_callback(void *ctx);
         rgbFrame.linesize = _picture.linesize[0];
         rgbFrame.rgb = [NSData dataWithBytes:_picture.data[0]
                                     length:rgbFrame.linesize * _videoCodecCtx->height];
+        //LoggerVideo(1, @"RGB frame");
         frame = rgbFrame;
     }    
     
@@ -1212,7 +1297,7 @@ static int interrupt_callback(void *ctx);
         // as example yuvj420p stream from web camera
         frame.duration = 1.0 / _fps;
     }    
-    frame.duration=0.0001; //MISKO
+    //frame.duration=0.0001; //MISKO
 #if 0
     LoggerVideo(2, @"VFD: %.4f %.4f | %lld ",
                 frame.position,
@@ -1381,34 +1466,37 @@ static int interrupt_callback(void *ctx);
     return _videoFrameFormat == format;
 }
 
-- (NSArray *) decodeFrames: (CGFloat) minDuration
+
+-(void) setEOF {
+    _isEOF=YES;
+}
+
+
+- (KxVideoFrame *) decodeFrame
 {
     if (_videoStream == -1 &&
         _audioStream == -1)
         return nil;
 
-    NSMutableArray *result = [NSMutableArray array];
+    
+    KxVideoFrame * frame=nil;
     
     AVPacket packet;
     
-    CGFloat decodedDuration = 0;
     
     BOOL finished = NO;
-    long packet_num=0;
+    
     while (!finished) {
         if (av_read_frame(_formatCtx, &packet) < 0) {
             _isEOF = YES;
             break;
         }
-        /*packet_num++;
-        if ( (packet_num%3)!=1) {
-            continue; //MISKO
-        }*/
+        
         if (packet.stream_index ==_videoStream) {
            
-            int pktSize = packet.size;
+            //int pktSize = packet.size;
             
-            while (pktSize > 0) {
+            //while (pktSize > 0) {
                             
                 int gotframe = 0;
                 int len = avcodec_decode_video2(_videoCodecCtx,
@@ -1433,112 +1521,25 @@ static int interrupt_callback(void *ctx);
                                               _videoCodecCtx->height);
                     }
                     
-                    KxVideoFrame *frame = [self handleVideoFrame];
+                    frame = [self handleVideoFrame];
                     if (frame) {
-                        
-                        [result addObject:frame];
-                        
                         _position = frame.position;
-                        //NSLog(@"New position is %0.4f",_position); //MISKO looks like these packets are buffered somewhere
-                        decodedDuration += frame.duration;
-                        if (decodedDuration > minDuration)
-                            finished = YES;
+                        finished=YES;
                     }
                 }
                                 
                 if (0 == len)
                     break;
                 
-                pktSize -= len;
-            }
+                //pktSize -= len;
+           // }
             
-        } else if (packet.stream_index == _audioStream) {
-                        
-            int pktSize = packet.size;
-            
-            while (pktSize > 0) {
-                
-                int gotframe = 0;
-                int len = avcodec_decode_audio4(_audioCodecCtx,
-                                                _audioFrame,                                                
-                                                &gotframe,
-                                                &packet);
-                
-                if (len < 0) {
-                    LoggerAudio(0, @"decode audio error, skip packet");
-                    break;
-                }
-                
-                if (gotframe) {
-                    
-                    KxAudioFrame * frame = [self handleAudioFrame];
-                    if (frame) {
-                        
-                        [result addObject:frame];
-                                                
-                        if (_videoStream == -1) {
-                            
-                            _position = frame.position;
-                            decodedDuration += frame.duration;
-                            if (decodedDuration > minDuration)
-                                finished = YES;
-                        }
-                    }
-                }
-                
-                if (0 == len)
-                    break;
-                
-                pktSize -= len;
-            }
-            
-        } else if (packet.stream_index == _artworkStream) {
-            
-            if (packet.size) {
-
-                KxArtworkFrame *frame = [[KxArtworkFrame alloc] init];
-                frame.picture = [NSData dataWithBytes:packet.data length:packet.size];
-                [result addObject:frame];
-            }
-            
-        } else if (packet.stream_index == _subtitleStream) {
-            
-            int pktSize = packet.size;
-            
-            while (pktSize > 0) {
-                
-                AVSubtitle subtitle;
-                int gotsubtitle = 0;
-                int len = avcodec_decode_subtitle2(_subtitleCodecCtx,
-                                                  &subtitle,
-                                                  &gotsubtitle,
-                                                  &packet);
-                
-                if (len < 0) {
-                    LoggerStream(0, @"decode subtitle error, skip packet");
-                    break;
-                }
-                
-                if (gotsubtitle) {
-                    
-                    KxSubtitleFrame *frame = [self handleSubtitle: &subtitle];
-                    if (frame) {
-                        [result addObject:frame];
-                    }
-                    avsubtitle_free(&subtitle);
-                }
-                
-                if (0 == len)
-                    break;
-                
-                pktSize -= len;
-            }
         }
 
         av_free_packet(&packet);
 	}
 
-    return result;
+    return frame;
 }
 
 @end

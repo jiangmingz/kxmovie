@@ -32,6 +32,16 @@ FFMPEG_BUILD_ARGS_SIM = [
 '--disable-asm',
 ]
 
+FFMPEG_BUILD_ARGS_SIM64 = [
+'--assert-level=2',
+'--disable-mmx',
+'--arch=x86_64',
+'--cpu=x86_64',
+"--extra-ldflags='-arch x86_64 -miphoneos-version-min=6.0'",
+"--extra-cflags='-arch x86_64 -miphoneos-version-min=6.0'",
+'--disable-asm',
+]
+
 FFMPEG_BUILD_ARGS_ARMV7 = [
 '--arch=arm',
 '--cpu=cortex-a8',
@@ -144,6 +154,8 @@ def buildArch(arch)
 	case arch
 	when 'i386'
 		args = mkArgs(PLATOFRM_PATH_SIM, SDK_PATH_SIM, FFMPEG_BUILD_ARGS_SIM)
+	when 'x86_64'
+		args = mkArgs(PLATOFRM_PATH_SIM, SDK_PATH_SIM, FFMPEG_BUILD_ARGS_SIM64)
 	when 'armv7'
 		args = mkArgs(PLATOFRM_PATH_IOS, SDK_PATH_IOS, FFMPEG_BUILD_ARGS_ARMV7)
 	when 'armv7s'
@@ -164,7 +176,7 @@ def buildArch(arch)
 end
 
 def mkLipoArgs(lib)
-	"-create -arch armv7 armv7/#{lib}.a -arch armv7 armv7s/#{lib}.a -arch arm64 arm64/#{lib}.a -arch i386 i386/#{lib}.a -output universal/#{lib}.a"
+	"-create -arch armv7 armv7/#{lib}.a -arch armv7 armv7s/#{lib}.a -arch arm64 arm64/#{lib}.a -arch i386 i386/#{lib}.a -arch x86_64 x86_64/#{lib}.a -output universal/#{lib}.a"
 end
 
 desc "check gas-preprocessor.pl"
@@ -200,6 +212,11 @@ end
 desc "Build ffmpeg i386 libs"
 task :build_ffmpeg_i386 do	
 	buildArch('i386')	
+end
+
+desc "Build ffmpeg x86_64 libs"
+task :build_ffmpeg_x86_64 do	
+	buildArch('x86_64')	
 end
 
 desc "Build ffmpeg armv7 libs"
@@ -283,8 +300,10 @@ task :build_movie_release do
 	FileUtils.move Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), Pathname.new('tmp/build/Release-iphoneos/libkxmovie_armv7.a')
 
 	#system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Release -sdk iphoneos#{SDK_VERSION} build SYMROOT=#{buildDir} -arch armv7"	
+	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir} -arch x86_64"	
+	FileUtils.move Pathname.new('tmp/build/Debug-iphonesimulator/libkxmovie.a'), Pathname.new('tmp/build/Debug-iphonesimulator/libkxmovie_x86_64.a')
 	system_or_exit "xcodebuild -project kxmovie.xcodeproj -target kxmovie -configuration Debug -sdk iphonesimulator#{SDK_VERSION} build SYMROOT=#{buildDir} -arch i386"	
-	system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7.a -arch armv7s tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch arm64 tmp/build/Release-iphoneos/libkxmovie_arm64.a -arch i386 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
+	system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7.a -arch armv7s tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch arm64 tmp/build/Release-iphoneos/libkxmovie_arm64.a -arch x86_64 tmp/build/Debug-iphonesimulator/libkxmovie_x86_64.a -arch i386 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
 	#MISKO#system_or_exit "lipo -create -arch armv7 tmp/build/Release-iphoneos/libkxmovie.a -arch armv7 tmp/build/Release-iphoneos/libkxmovie_armv7s.a -arch armv7 tmp/build/Debug-iphonesimulator/libkxmovie.a -output tmp/build/libkxmovie.a"
 	
 	#FileUtils.copy Pathname.new('tmp/build/Release-iphoneos/libkxmovie.a'), buildDir
@@ -292,7 +311,7 @@ end
 
 desc "Copy to output folder"
 task :copy_movie do	
-	dest = ensureDir '../'	
+	dest = ensureDir '../PetBot/'	
 	FileUtils.move Pathname.new('tmp/build/libkxmovie.a'), dest		
 	FileUtils.copy Pathname.new('libs/FFmpeg/libavcodec.a'), dest
 	FileUtils.copy Pathname.new('libs/FFmpeg/libavformat.a'), dest

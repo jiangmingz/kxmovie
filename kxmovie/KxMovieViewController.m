@@ -554,7 +554,7 @@ _messageLabel.hidden = YES;
 #endif
 
     [self asyncDecodeFrames];
-    [self updatePlayButton];
+    //[self updatePlayButton];
 
     dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC);
     dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
@@ -573,11 +573,10 @@ _messageLabel.hidden = YES;
 {
     if (!self.playing)
         return;
-
     self.playing = NO;
     //_interrupted = YES;
     //[self enableAudio:NO];
-    [self updatePlayButton];
+    //[self updatePlayButton];
     LoggerStream(1, @"pause movie");
 }
 
@@ -1015,7 +1014,11 @@ _messageLabel.hidden = YES;
     if (_decoder.validVideo ||
         _decoder.validAudio) {
         
-        frames = [_decoder decodeFrames:0];
+        KxVideoFrame * kf =[_decoder decodeFrame];
+        if (kf!=nil) {
+            frames=[[NSArray init] initWithObject:kf];
+        }
+        
     }
     
     if (frames.count) {
@@ -1054,7 +1057,13 @@ _messageLabel.hidden = YES;
                 
                 if (decoder && (decoder.validVideo || decoder.validAudio)) {
                     
-                    NSArray *frames = [decoder decodeFrames:duration];
+                    
+                    NSArray *frames = [NSArray init];
+                    
+                    KxVideoFrame * kf =[_decoder decodeFrame];
+                    if (kf!=nil) {
+                        frames=[[NSArray init] initWithObject:kf];
+                    }
                     if (frames.count) {
                         
                         __strong KxMovieViewController *strongSelf = weakSelf;
@@ -1306,10 +1315,6 @@ _messageLabel.hidden = YES;
                            _fixedSpaceItem, _fforwardBtn, _spaceItem] animated:NO];
 }
 
-- (void) updatePlayButton
-{
-    [self updateBottomBar];
-}
 
 - (void) updateHUD
 {

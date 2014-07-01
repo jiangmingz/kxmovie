@@ -16,7 +16,7 @@
 #import <OpenGLES/ES2/gl.h>
 #import <OpenGLES/ES2/glext.h>
 #import "KxMovieDecoder.h"
-//#import "KxLogger.h"
+#import "KxLogger.h"
 
 //////////////////////////////////////////////////////////
 
@@ -370,6 +370,49 @@ enum {
 	return [CAEAGLLayer class];
 }
 
+-(UIImage *) glToUIImage {
+    NSInteger myDataLength = 640 * 480 * 4;
+    
+    // allocate array and read pixels into it.
+    GLubyte *buffer = (GLubyte *) malloc(myDataLength);
+    glReadPixels(0, 0, 640, 480, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+    
+    // gl renders "upside down" so swap top to bottom into new array.
+    // there's gotta be a better way, but this works.
+    GLubyte *buffer2 = (GLubyte *) malloc(myDataLength);
+    for(int y = 0; y < 480; y++)
+    {
+        for(int x = 0; x < 640 * 4; x++)
+        {
+            buffer2[(479 - y) * 640 * 4 + x] = buffer[y * 4 * 640 + x];
+        }
+    }
+    
+    // make data provider with data.
+    CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, buffer2, myDataLength, NULL);
+    
+    // prep the ingredients
+    int bitsPerComponent = 8;
+    int bitsPerPixel = 32;
+    int bytesPerRow = 4 * 640;
+    CGColorSpaceRef colorSpaceRef = CGColorSpaceCreateDeviceRGB();
+    CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault;
+    CGColorRenderingIntent renderingIntent = kCGRenderingIntentDefault;
+    
+    // make the cgimage
+    CGImageRef imageRef = CGImageCreate(640, 480, bitsPerComponent, bitsPerPixel, bytesPerRow, colorSpaceRef, bitmapInfo, provider, NULL, NO, renderingIntent);
+    
+    // then make the uiimage from that
+    UIImage *myImage = [UIImage imageWithCGImage:imageRef];
+    return myImage;
+}
+
+-(void)captureToPhotoAlbum {
+    UIImage *image = [self glToUIImage];
+    UIImageWriteToSavedPhotosAlbum(image, self, nil, nil);
+}
+
+
 - (id) initWithFrame:(CGRect)frame
              decoder: (KxMovieDecoder *) decoder
 {
@@ -454,6 +497,7 @@ enum {
 
 - (void)dealloc
 {
+    LoggerVideo(1,@"CALLED DEALLOC FOR GL VIEW!!!!!");
     _renderer = nil;
 
     if (_framebuffer) {
