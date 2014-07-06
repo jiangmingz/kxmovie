@@ -94,6 +94,22 @@ FFMPEG_BUILD_ARGS_ARM64 = [
 ]
 
 FFMPEG_BUILD_ARGS = [
+'--disable-encoders',
+'--disable-decoders',
+'--enable-decoder=flv',
+'--enable-decoder=h264',
+'--disable-muxers',
+'--disable-demuxers',
+'--enable-demuxer=flv',
+'--enable-demuxer=mpegvideo',
+'--enable-demuxer=rtp',
+'--enable-demuxer=rtsp',
+'--disable-parsers',
+'--enable-parser=h264',
+'--disable-bsfs',
+'--disable-protocols',
+'--enable-protocol=rtp',
+'--enable-protocol=rtsp',
 '--disable-ffmpeg',
 '--disable-ffplay',
 '--disable-ffserver',
@@ -328,7 +344,7 @@ end
 
 ##
 task :clean => [:clean_movie_debug, :clean_movie_release, :clean_ffmpeg]
-task :build_ffmpeg => [:check_gas_preprocessor, :build_ffmpeg_armv7, :build_ffmpeg_armv7s, :build_ffmpeg_arm64, :build_ffmpeg_i386, :build_ffmpeg_universal]
+task :build_ffmpeg => [:check_gas_preprocessor, :build_ffmpeg_armv7, :build_ffmpeg_armv7s, :build_ffmpeg_arm64, :build_ffmpeg_i386, :build_ffmpeg_x86_64, :build_ffmpeg_universal]
 #task :build_movie => [:build_movie_debug, :copy_movie] 
 task :build_movie => [:build_movie_release, :copy_movie] 
 task :build_all => [:build_ffmpeg, :build_movie] 
