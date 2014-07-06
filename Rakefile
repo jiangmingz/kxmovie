@@ -110,6 +110,8 @@ FFMPEG_BUILD_ARGS = [
 '--disable-protocols',
 '--enable-protocol=rtp',
 '--enable-protocol=rtsp',
+'--enable-protocol=rtmp',
+'--enable-protocol=ffrtmphttp',
 '--disable-ffmpeg',
 '--disable-ffplay',
 '--disable-ffserver',
