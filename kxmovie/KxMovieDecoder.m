@@ -803,6 +803,7 @@ static int interrupt_callback(void *ctx);
     formatCtx->probesize=2048; //MISKO
     //formatCtx->probesize=2048*8; //MISKO
     formatCtx->max_analyze_duration=0; //MISKO
+    //formatCtx->flags|=AVFMT_FLAG_NONBLOCK;//MISKO
     //formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
     //formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
     
