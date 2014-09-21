@@ -800,9 +800,9 @@ static int interrupt_callback(void *ctx);
         formatCtx->interrupt_callback = cb;
     }
     //formatCtx->avio_flags=AVIO_FLAG_DIRECT;//MISKO
-    formatCtx->probesize=2048; //MISKO
+    //formatCtx->probesize=2048; //MISKO
     //formatCtx->probesize=2048*8; //MISKO
-    formatCtx->max_analyze_duration=0; //MISKO
+    //formatCtx->max_analyze_duration=0; //MISKO
     //formatCtx->flags|=AVFMT_FLAG_NONBLOCK;//MISKO
     //formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
     //formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
@@ -813,6 +813,10 @@ static int interrupt_callback(void *ctx);
     av_dict_set(&options, "min_port", [@([self local_port]).stringValue UTF8String], 0);
     av_dict_set(&options, "max_port", [@([self local_port]+2).stringValue UTF8String], 0);
     av_dict_set(&options, "adv_port", [@([self advertised_port]).stringValue UTF8String], 0);
+    
+    av_dict_set(&options, "probesize", [@"32" UTF8String], 0);
+    av_dict_set(&options, "format_probesize", [@"1" UTF8String], 0);
+    av_dict_set(&options, "max_analyze_duration", [@"1" UTF8String], 0);
     
     av_dict_set(&options, "max_delay", "0.1", 0);
     //formatCtx->max_delay //TODO MAX DELAY PART OF formatCTX STRUCT!

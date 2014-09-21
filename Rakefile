@@ -54,7 +54,7 @@ FFMPEG_BUILD_ARGS_ARMV7 = [
 '--enable-optimizations',
 '--disable-debug',
 '--disable-armv5te',
-'--disable-armv6',
+#'--disable-armv6',
 '--disable-armv6t2',
 '--enable-small',
 ]
@@ -71,7 +71,7 @@ FFMPEG_BUILD_ARGS_ARMV7S = [
 '--enable-optimizations',
 '--disable-debug',
 '--disable-armv5te',
-'--disable-armv6',
+#'--disable-armv6',
 '--disable-armv6t2',
 '--enable-small',
 ]
