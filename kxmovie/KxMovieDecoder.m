@@ -806,6 +806,7 @@ static int interrupt_callback(void *ctx);
     //formatCtx->flags|=AVFMT_FLAG_NONBLOCK;//MISKO
     //formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
     //formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
+    formatCtx->max_delay=0;
     
     AVDictionary *options = NULL;
     //NSLog(@"Setting value as %@ %@ %@",@([self local_port]).stringValue, @([self local_port]+1).stringValue,  @([self advertised_port]).stringValue);
@@ -1499,9 +1500,9 @@ static int interrupt_callback(void *ctx);
         
         if (packet.stream_index ==_videoStream) {
            
-            //int pktSize = packet.size;
+            int pktSize = packet.size;
             
-            //while (pktSize > 0) {
+            while (pktSize > 0) {
                             
                 int gotframe = 0;
                 int len = avcodec_decode_video2(_videoCodecCtx,
@@ -1536,8 +1537,8 @@ static int interrupt_callback(void *ctx);
                 if (0 == len)
                     break;
                 
-                //pktSize -= len;
-           // }
+                pktSize -= len;
+            }
             
         }
 
