@@ -1,6 +1,7 @@
 [submodule "gas-preprocessor"]
 	path = gas-preprocessor
-	url=git://github.com/libav/gas-preprocessor.git
+	url = https://github.com/libav/gas-preprocessor
 [submodule "FFmpeg"]
 	path = FFmpeg
-	url = git@github.com:petbot/FFmpeg.git
+	url = https://github.com/petbot/FFmpeg
+	
