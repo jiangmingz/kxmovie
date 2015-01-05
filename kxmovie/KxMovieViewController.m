@@ -183,7 +183,7 @@ static NSMutableDictionary * gHistory;
         dispatch_async(dispatch_get_global_queue(0, 0), ^{
     
             NSError *error = nil;
-            [decoder openFile:path error:&error];
+            [decoder openFile:path altFile:nil error:&error];
                         
             __strong KxMovieViewController *strongSelf = weakSelf;
             if (strongSelf) {
@@ -394,7 +394,7 @@ _messageLabel.hidden = YES;
             
             // force ffmpeg to free allocated memory
             [_decoder closeFile];
-            [_decoder openFile:nil error:nil];
+            [_decoder openFile:nil altFile:nil error:nil];
             
             [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Failure", nil)
                                         message:NSLocalizedString(@"Out of memory", nil)
@@ -407,7 +407,7 @@ _messageLabel.hidden = YES;
         
         [self freeBufferedFrames];
         [_decoder closeFile];
-        [_decoder openFile:nil error:nil];
+        [_decoder openFile:nil altFile:nil error:nil];
     }
 }
 

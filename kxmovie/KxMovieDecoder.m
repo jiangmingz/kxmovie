@@ -718,12 +718,12 @@ static int interrupt_callback(void *ctx);
     avformat_network_init();
 }
 
-+ (id) movieDecoderWithContentPath: (NSString *) path
++ (id) movieDecoderWithContentPath: (NSString *) path altPath: (NSString *) altPath
                              error: (NSError **) perror
 {
     KxMovieDecoder *mp = [[KxMovieDecoder alloc] init];
     if (mp) {
-        [mp openFile:path error:perror];
+        [mp openFile:path altFile:altPath error:perror];
     }
     return mp;
 }
@@ -736,7 +736,7 @@ static int interrupt_callback(void *ctx);
 
 #pragma mark - private
 
-- (BOOL) openFile: (NSString *) path
+- (BOOL) openFile: (NSString *) path altFile:(NSString *) altpath
             error: (NSError **) perror
 {
     NSAssert(path, @"nil path");
@@ -753,7 +753,7 @@ static int interrupt_callback(void *ctx);
     
     _path = path;
     
-    kxMovieError errCode = [self openInput: path];
+    kxMovieError errCode = [self openInput: path alternativeInput:altpath];
     
     if (errCode == kxMovieErrorNone) {
         
@@ -786,7 +786,7 @@ static int interrupt_callback(void *ctx);
     return YES;
 }
 
-- (kxMovieError) openInput: (NSString *) path
+- (kxMovieError) openInput: (NSString *) path alternativeInput: (NSString *) altPath
 {
     AVFormatContext *formatCtx = NULL;
     
@@ -806,7 +806,7 @@ static int interrupt_callback(void *ctx);
     //formatCtx->flags|=AVFMT_FLAG_NONBLOCK;//MISKO
     //formatCtx->flags|=AVFMT_FLAG_NOBUFFER; //MISKO
     //formatCtx->flags|=AVFMT_FLAG_FLUSH_PACKETS; //MISKO
-    formatCtx->max_delay=0;
+    //formatCtx->max_delay=0;
     
     AVDictionary *options = NULL;
     //NSLog(@"Setting value as %@ %@ %@",@([self local_port]).stringValue, @([self local_port]+1).stringValue,  @([self advertised_port]).stringValue);
@@ -819,7 +819,9 @@ static int interrupt_callback(void *ctx);
     av_dict_set(&options, "format_probesize", [@"1" UTF8String], 0);
     av_dict_set(&options, "max_analyze_duration", [@"1" UTF8String], 0);
     
-    av_dict_set(&options, "max_delay", "0.1", 0);
+    av_dict_set(&options, "max_delay", [@"1.5" UTF8String], 0);
+    
+    //av_dict_set(&options, "timeout", [@"3000000000" UTF8String], 0);
     //formatCtx->max_delay //TODO MAX DELAY PART OF formatCTX STRUCT!
     
     //av_dict_set(&options, "direct", [@([self advertised_port]).stringValue UTF8String], 0);
@@ -829,12 +831,17 @@ static int interrupt_callback(void *ctx);
     //NSLog(@"Xadv port is set 12345");
     
     if (avformat_open_input(&formatCtx, [path cStringUsingEncoding: NSUTF8StringEncoding], NULL, &options) < 0) {
-        
-        if (formatCtx)
-            avformat_free_context(formatCtx);
-        return kxMovieErrorOpenFile;
+        //try altpath
+        NSLog(@"FAILED OPEN %@ %@",path,altPath);
+        if (altPath==nil || avformat_open_input(&formatCtx, [altPath cStringUsingEncoding: NSUTF8StringEncoding], NULL, &options) < 0) {
+            
+            NSLog(@"TRIED ALT %@",altPath);
+            if (formatCtx)
+                avformat_free_context(formatCtx);
+            return kxMovieErrorOpenFile;
+        }
     }
-    //NSLog(@"Xcheck point kxmovie1");
+    NSLog(@"Xcheck point kxmovie1");
     if (avformat_find_stream_info(formatCtx, NULL) < 0) {
         
         avformat_close_input(&formatCtx);
